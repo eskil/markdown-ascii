@@ -70,3 +70,12 @@ Enable italic text under `Profiles -> Text -> Allow italic text`.
 ## Sample
 
 Open `markdown-ascii-sample.md` (included in the repo) and run `M-x markdown-ascii-preview` to see all supported features.
+
+## Screenshots
+
+### v1.0.0
+
+![Screenshot 1](docs/imgs/markdown-ascii-sample-1.png)
+![Screenshot 2](docs/imgs/markdown-ascii-sample-2.png)
+![Screenshot 3](docs/imgs/markdown-ascii-sample-3.png)
+![Screenshot 4](docs/imgs/markdown-ascii-sample-4.png)
