@@ -11,4 +11,5 @@
 - Also supports
   - codeblocks with syntax hightlighting
   - mermaid diagrams as ascii art
+- Live updates and follows scroll
 

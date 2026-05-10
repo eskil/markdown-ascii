@@ -1,5 +1,6 @@
 ![Static Badge](https://img.shields.io/badge/%F0%9F%A4%96%20AI%20content-90%25-red)
 ![Static Badge](https://img.shields.io/badge/%F0%9F%A7%A0%20Human%20content-10%25-red)
+![Static Badge](https://img.shields.io/badge/ircv3-no-blue)
 
 # Ascii Markdown preview for Emacs
 
@@ -10,6 +11,7 @@ Renders Markdown as formatted text with ANSI faces. No HTML, no browser, no exte
 - Tables, blockquotes, ordered and unordered lists, checkboxes
 - Horizontal rules, links, setext-style headings
 - Mermaid diagrams rendered as ASCII art (sequence, pie, flowchart; others fall back to a framed box)
+- Live updates
 
 This is a LLM generated do-over of a halfbaked covid-lockdown version. It's completely rewritten and more feature cmplete.
 
