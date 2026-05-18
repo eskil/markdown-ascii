@@ -1,7 +1,7 @@
 ;;; markdown-ascii.el --- Plain-text Markdown preview  -*- lexical-binding: t -*-
 ;;
 ;; Author: Eskil Olsen
-;; Version: 1.0.0
+;; Version: 1.0.1
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: markdown, text, preview
 ;; URL: https://github.com/eskil/markdown-ascii
@@ -248,7 +248,8 @@ Bold is matched before italic so ** is never misread as two *."
 (defun markdown-ascii--highlight-code (code lang)
   "Return CODE syntax-highlighted for LANG as a propertized string.
 Falls back to plain `markdown-ascii-code' face if the mode is unavailable."
-  (let ((mode (and (not (string-empty-p lang))
+  (let ((mode (and (stringp lang)
+                   (not (string-empty-p lang))
                    (cdr (assoc lang markdown-ascii--lang-modes)))))
     (if (and mode (fboundp mode))
         (with-temp-buffer
@@ -937,7 +938,7 @@ Returns updated RESULT."
                 prev-blank nil))
         (setq in-code t
               code-fence (match-string 1 raw)
-              code-lang (downcase (match-string 2 raw))
+          code-lang (downcase (or (match-string 2 raw) ""))
               code-acc '()))
 
        ;; ── ATX heading  # …  ─────────────────────────────────────────
@@ -1009,8 +1010,9 @@ Returns updated RESULT."
           (setq result (markdown-ascii--flush-para para-acc result markdown-ascii-fill-column)
                 para-acc '()
                 prev-blank nil))
-        (let* ((depth   (/ (length (match-string 1 raw)) 2))
-               (content (match-string 2 raw))
+          (let* ((indent  (or (match-string 1 raw) ""))
+                 (content (or (match-string 2 raw) ""))
+                 (depth   (/ (length indent) 2))
                (pad     (make-string (* depth 2) ?\s)))
           (cond
            ((string-match "^\\[ \\][ \t]\\(.*\\)$" content)
@@ -1038,9 +1040,11 @@ Returns updated RESULT."
           (setq result (markdown-ascii--flush-para para-acc result markdown-ascii-fill-column)
                 para-acc '()
                 prev-blank nil))
-        (let* ((depth (/ (length (match-string 1 raw)) 3))
-               (num (match-string 2 raw))
-               (text (markdown-ascii--render-inline (match-string 3 raw)))
+          (let* ((indent (or (match-string 1 raw) ""))
+                 (num (or (match-string 2 raw) ""))
+                 (item-text (or (match-string 3 raw) ""))
+                 (depth (/ (length indent) 3))
+                 (text (markdown-ascii--render-inline item-text))
                (pad (make-string (* depth 3) ?\s)))
           (push (concat "  " pad num ". " text) result)
           (setq prev-blank nil)))
