@@ -1,10 +1,14 @@
+## 1.0.2 2026/05/19
+
+- Fix invalid argument.
+
 ## 1.0.1 2026/05/17
 
 - Fix assorted crashes, eg. on code blocks w/o languages.
 
 ## 1.0.0 2026/05/03
 
-- Initial redo of lockdown project, built using Claude.
+- Redo of lockdown project, redone using Claude.
 - Supports most common markdown
   - fonts
   - links

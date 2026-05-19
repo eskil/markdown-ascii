@@ -1,7 +1,7 @@
 ;;; markdown-ascii.el --- Plain-text Markdown preview  -*- lexical-binding: t -*-
 ;;
 ;; Author: Eskil Olsen
-;; Version: 1.0.1
+;; Version: 1.0.2
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: markdown, text, preview
 ;; URL: https://github.com/eskil/markdown-ascii
@@ -1141,9 +1141,9 @@ If the preview window is already visible, scroll position is preserved."
     (if preview-win
         (progn
           (set-window-point preview-win
-                            (min saved-point (point-max preview-buf)))
+                            (min saved-point (with-current-buffer preview-buf (point-max))))
           (set-window-start preview-win
-                            (min saved-start (point-max preview-buf)) t))
+                            (min saved-start (with-current-buffer preview-buf (point-max))) t))
       (with-current-buffer preview-buf (goto-char (point-min)))
       (display-buffer preview-buf))))
 
