@@ -881,6 +881,12 @@ H3: text + --- line.       H4+: text + ... line."
   "Return bullet string for list DEPTH."
   (nth (min depth 3) '("•" "◦" "▸" "▹")))
 
+(defun markdown-ascii--strip-indent (line n)
+  "Remove up to N leading whitespace characters from LINE."
+  (if (string-match (concat "^[ \t]\\{0," (number-to-string n) "\\}") line)
+      (substring line (match-end 0))
+    line))
+
 (defun markdown-ascii--flush-para (para-acc result fill)
   "Join PARA-ACC lines (LIFO order) with space, render inline, wrap, push to RESULT.
 Returns updated RESULT."
@@ -898,6 +904,7 @@ Returns updated RESULT."
         (in-code nil)
         (code-fence "")
         (code-lang "")
+        (code-indent 0)
         (code-acc '())
         (in-table nil)
         (table-rows '())
@@ -914,28 +921,28 @@ Returns updated RESULT."
       (cond
        ;; ── inside fenced code block ──────────────────────────────────
        (in-code
-        (let ((fence (or code-fence "")))
-          (if (and (not (string-empty-p fence))
-                   (string-match (concat "^" (regexp-quote fence) "`*\\s-*$") raw))
-              (progn
-                (setq in-code nil)
-                (unless (or (null result) (string-empty-p (car result)))
-                  (push "" result))
-                (let ((body (string-join (nreverse code-acc) "\n")))
-                  (if (equal code-lang "mermaid")
-                      (dolist (l (markdown-ascii--render-mermaid body))
-                        (push l result))
-                    (setq result (markdown-ascii--push-code-block
-                                  (markdown-ascii--highlight-code body code-lang)
-                                  result))))
-                (push "" result)
-                (setq code-acc '()))
-            (push raw code-acc))))
+        (if (string-match (concat "^[ \t]\\{0," (number-to-string code-indent) "\\}"
+                                   (regexp-quote code-fence) "`*\\s-*$") raw)
+            (progn
+              (setq in-code nil)
+              (unless (or (null result) (string-empty-p (car result)))
+                (push "" result))
+              (let ((body (string-join (nreverse code-acc) "\n")))
+                (if (equal code-lang "mermaid")
+                    (dolist (l (markdown-ascii--render-mermaid body))
+                      (push l result))
+                  (setq result (markdown-ascii--push-code-block
+                                (markdown-ascii--highlight-code body code-lang)
+                                result))))
+              (push "" result)
+              (setq code-acc '()))
+          (push (markdown-ascii--strip-indent raw code-indent) code-acc)))
 
-       ;; ── fenced code block start ───────────────────────────────────
-       ((string-match "^\\(```+\\|~~~+\\)\\s-*\\([a-zA-Z0-9+-]*\\)" raw)
-        (let ((fence (or (match-string 1 raw) ""))
-              (lang (downcase (or (match-string 2 raw) ""))))
+       ;; ── fenced code block start (optionally indented, e.g. in a list) ──
+       ((string-match "^\\([ \t]*\\)\\(```+\\|~~~+\\)\\s-*\\([a-zA-Z0-9+-]*\\)" raw)
+        (let ((indent (or (match-string 1 raw) ""))
+              (fence (or (match-string 2 raw) ""))
+              (lang (downcase (or (match-string 3 raw) ""))))
           (when para-acc
             (setq result (markdown-ascii--flush-para para-acc result markdown-ascii-fill-column)
                   para-acc '()
@@ -943,6 +950,7 @@ Returns updated RESULT."
           (setq in-code t
                 code-fence fence
                 code-lang lang
+                code-indent (length indent)
                 code-acc '())))
 
        ;; ── ATX heading  # …  ─────────────────────────────────────────
