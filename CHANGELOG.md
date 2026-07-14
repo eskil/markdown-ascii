@@ -1,3 +1,7 @@
+## 1.0.3 2026/07/13
+
+- Fix bug in codeblock handling.
+
 ## 1.0.2 2026/05/19
 
 - Fix invalid argument.
