@@ -914,32 +914,36 @@ Returns updated RESULT."
       (cond
        ;; ── inside fenced code block ──────────────────────────────────
        (in-code
-        (if (string-match (concat "^" (regexp-quote code-fence) "`*\\s-*$") raw)
-            (progn
-              (setq in-code nil)
-              (unless (or (null result) (string-empty-p (car result)))
-                (push "" result))
-              (let ((body (string-join (nreverse code-acc) "\n")))
-                (if (equal code-lang "mermaid")
-                    (dolist (l (markdown-ascii--render-mermaid body))
-                      (push l result))
-                  (setq result (markdown-ascii--push-code-block
-                                (markdown-ascii--highlight-code body code-lang)
-                                result))))
-              (push "" result)
-              (setq code-acc '()))
-          (push raw code-acc)))
+        (let ((fence (or code-fence "")))
+          (if (and (not (string-empty-p fence))
+                   (string-match (concat "^" (regexp-quote fence) "`*\\s-*$") raw))
+              (progn
+                (setq in-code nil)
+                (unless (or (null result) (string-empty-p (car result)))
+                  (push "" result))
+                (let ((body (string-join (nreverse code-acc) "\n")))
+                  (if (equal code-lang "mermaid")
+                      (dolist (l (markdown-ascii--render-mermaid body))
+                        (push l result))
+                    (setq result (markdown-ascii--push-code-block
+                                  (markdown-ascii--highlight-code body code-lang)
+                                  result))))
+                (push "" result)
+                (setq code-acc '()))
+            (push raw code-acc))))
 
        ;; ── fenced code block start ───────────────────────────────────
        ((string-match "^\\(```+\\|~~~+\\)\\s-*\\([a-zA-Z0-9+-]*\\)" raw)
-        (when para-acc
-          (setq result (markdown-ascii--flush-para para-acc result markdown-ascii-fill-column)
-                para-acc '()
-                prev-blank nil))
-        (setq in-code t
-              code-fence (match-string 1 raw)
-          code-lang (downcase (or (match-string 2 raw) ""))
-              code-acc '()))
+        (let ((fence (or (match-string 1 raw) ""))
+              (lang (downcase (or (match-string 2 raw) ""))))
+          (when para-acc
+            (setq result (markdown-ascii--flush-para para-acc result markdown-ascii-fill-column)
+                  para-acc '()
+                  prev-blank nil))
+          (setq in-code t
+                code-fence fence
+                code-lang lang
+                code-acc '())))
 
        ;; ── ATX heading  # …  ─────────────────────────────────────────
        ((string-match "^\\(#\\{1,6\\}\\)[ \t]+\\(.*?\\)[ \t#]*$" raw)
