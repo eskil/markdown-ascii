@@ -1,3 +1,7 @@
+## 1.0.4 2026/07/19
+
+- Fix bug in indented codeblock handling.
+
 ## 1.0.3 2026/07/13
 
 - Fix bug in codeblock handling.
