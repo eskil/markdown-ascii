@@ -1,7 +1,7 @@
 ;;; markdown-ascii.el --- Plain-text Markdown preview  -*- lexical-binding: t -*-
 ;;
 ;; Author: Eskil Olsen
-;; Version: 1.0.2
+;; Version: 1.0.5
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: markdown, text, preview
 ;; URL: https://github.com/eskil/markdown-ascii

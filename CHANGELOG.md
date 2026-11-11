@@ -1,3 +1,8 @@
+## 1.0.5 2026/11/11
+
+- Fix dropped first line of list items following a multi-line item.
+- Multi-line list items wrap with a hanging indent.
+
 ## 1.0.4 2026/07/19
 
 - Fix bug in indented codeblock handling.
