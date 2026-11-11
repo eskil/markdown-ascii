@@ -890,12 +890,43 @@ H3: text + --- line.       H4+: text + ... line."
 (defun markdown-ascii--flush-para (para-acc result fill)
   "Join PARA-ACC lines (LIFO order) with space, render inline, wrap, push to RESULT.
 Returns updated RESULT."
-  (when para-acc
-    (let* ((joined (string-join (reverse para-acc) " "))
-           (rendered (markdown-ascii--render-inline joined)))
-      (dolist (l (markdown-ascii--wrap-lines rendered fill))
-        (push l result))))
+  ;; Callers often still need the match data from their own `string-match'
+  ;; on the current line, and inline rendering clobbers it.
+  (save-match-data
+    (when para-acc
+      (let* ((joined (string-join (reverse para-acc) " "))
+             (rendered (markdown-ascii--render-inline joined)))
+        (dolist (l (markdown-ascii--wrap-lines rendered fill))
+          (push l result)))))
   result)
+
+(defun markdown-ascii--block-start-p (line)
+  "Non-nil if LINE is blank or starts a new block.
+Any other line directly after a list item continues that item."
+  (save-match-data
+    (or (string-match "^[ \t]*$" line)
+        (string-match "^[ \t]*\\(```\\|~~~\\)" line)
+        (string-match "^#\\{1,6\\}[ \t]" line)
+        (string-match "^\\([-*_][ \t]*\\)\\{3,\\}[ \t]*$" line)
+        (string-match "^>" line)
+        (string-match "^[ \t]*[-*+][ \t]+" line)
+        (string-match "^[ \t]*[0-9]+[.)][ \t]+" line)
+        (markdown-ascii--table-row-p line))))
+
+(defun markdown-ascii--render-list-item (prefix parts face fill)
+  "Render a list item as display lines with a hanging indent.
+PREFIX is the leading indent plus marker, PARTS the item's source lines in
+order, FACE an optional face for the whole text, FILL the wrap column."
+  (save-match-data
+    (let* ((text   (markdown-ascii--render-inline (string-join parts " ")))
+           (text   (if face (propertize text 'face face) text))
+           (pw     (string-width prefix))
+           (indent (make-string pw ?\s))
+           (lines  (let ((adaptive-fill-mode nil))
+                     (markdown-ascii--wrap-lines
+                      text (if (> fill 0) (max 10 (- fill pw)) 0)))))
+      (cons (concat prefix (car lines))
+            (mapcar (lambda (l) (concat indent l)) (cdr lines))))))
 
 (defun markdown-ascii--render (text)
   "Render markdown TEXT string to a propertized plain-text string."
@@ -909,6 +940,10 @@ Returns updated RESULT."
         (in-table nil)
         (table-rows '())
         (para-acc '())
+        (item-prefix nil)   ; pending list item: indent + marker string
+        (item-acc '())      ; pending list item: source lines (LIFO)
+        (item-face nil)     ; pending list item: optional whole-text face
+        (item-cont nil)
         (prev-blank t))
     (dolist (raw lines)
       ;; ── flush table when leaving table context ────────────────────
@@ -918,7 +953,19 @@ Returns updated RESULT."
           (push l result))
         (push "" result)
         (setq in-table nil table-rows '() prev-blank t))
+      ;; ── continue or flush a pending list item ─────────────────────
+      (setq item-cont (and item-prefix (not in-code)
+                           (not (markdown-ascii--block-start-p raw))))
+      (when (and item-prefix (not item-cont))
+        (dolist (l (markdown-ascii--render-list-item
+                    item-prefix (reverse item-acc) item-face markdown-ascii-fill-column))
+          (push l result))
+        (setq item-prefix nil item-acc '() item-face nil))
       (cond
+       ;; ── list item continuation line ───────────────────────────────
+       (item-cont
+        (push (string-trim raw) item-acc))
+
        ;; ── inside fenced code block ──────────────────────────────────
        (in-code
         (if (string-match (concat "^[ \t]\\{0," (number-to-string code-indent) "\\}"
@@ -1022,28 +1069,27 @@ Returns updated RESULT."
           (setq result (markdown-ascii--flush-para para-acc result markdown-ascii-fill-column)
                 para-acc '()
                 prev-blank nil))
-          (let* ((indent  (or (match-string 1 raw) ""))
-                 (content (or (match-string 2 raw) ""))
-                 (depth   (/ (length indent) 2))
+        (let* ((indent  (or (match-string 1 raw) ""))
+               (content (or (match-string 2 raw) ""))
+               (depth   (/ (length indent) 2))
                (pad     (make-string (* depth 2) ?\s)))
           (cond
            ((string-match "^\\[ \\][ \t]\\(.*\\)$" content)
-            (push (concat "  " pad
-                          (propertize "☐" 'face 'markdown-ascii-checkbox-todo)
-                          " "
-                          (markdown-ascii--render-inline (match-string 1 content)))
-                  result))
+            (setq item-prefix (concat "  " pad
+                                      (propertize "☐" 'face 'markdown-ascii-checkbox-todo)
+                                      " ")
+                  item-acc    (list (match-string 1 content))
+                  item-face   nil))
            ((string-match "^\\[[xX]\\][ \t]\\(.*\\)$" content)
-            (push (concat "  " pad
-                          (propertize "☑" 'face 'markdown-ascii-checkbox-done)
-                          " "
-                          (propertize (markdown-ascii--render-inline (match-string 1 content))
-                                      'face 'markdown-ascii-checkbox-done))
-                  result))
+            (setq item-prefix (concat "  " pad
+                                      (propertize "☑" 'face 'markdown-ascii-checkbox-done)
+                                      " ")
+                  item-acc    (list (match-string 1 content))
+                  item-face   'markdown-ascii-checkbox-done))
            (t
-            (push (concat "  " pad (markdown-ascii--list-bullet depth) " "
-                          (markdown-ascii--render-inline content))
-                  result)))
+            (setq item-prefix (concat "  " pad (markdown-ascii--list-bullet depth) " ")
+                  item-acc    (list content)
+                  item-face   nil)))
           (setq prev-blank nil)))
 
        ;; ── ordered list  1. / 1) ─────────────────────────────────────
@@ -1052,14 +1098,15 @@ Returns updated RESULT."
           (setq result (markdown-ascii--flush-para para-acc result markdown-ascii-fill-column)
                 para-acc '()
                 prev-blank nil))
-          (let* ((indent (or (match-string 1 raw) ""))
-                 (num (or (match-string 2 raw) ""))
-                 (item-text (or (match-string 3 raw) ""))
-                 (depth (/ (length indent) 3))
-                 (text (markdown-ascii--render-inline item-text))
-               (pad (make-string (* depth 3) ?\s)))
-          (push (concat "  " pad num ". " text) result)
-          (setq prev-blank nil)))
+        (let* ((indent    (or (match-string 1 raw) ""))
+               (num       (or (match-string 2 raw) ""))
+               (item-text (or (match-string 3 raw) ""))
+               (depth     (/ (length indent) 3))
+               (pad       (make-string (* depth 3) ?\s)))
+          (setq item-prefix (concat "  " pad num ". ")
+                item-acc    (list item-text)
+                item-face   nil
+                prev-blank  nil)))
 
        ;; ── indented code (4 spaces or tab) ───────────────────────────
        ((string-match "^\\(?:    \\|\t\\)\\(.*\\)$" raw)
@@ -1096,6 +1143,12 @@ Returns updated RESULT."
     ;; Flush remaining paragraph
     (when para-acc
       (setq result (markdown-ascii--flush-para para-acc result markdown-ascii-fill-column)))
+
+    ;; Flush any pending list item
+    (when item-prefix
+      (dolist (l (markdown-ascii--render-list-item
+                  item-prefix (reverse item-acc) item-face markdown-ascii-fill-column))
+        (push l result)))
 
     ;; Flush any pending table
     (when in-table

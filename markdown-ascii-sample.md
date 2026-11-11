@@ -42,6 +42,31 @@ Ordered lists:
 - [ ] Do this
 - [ ] and that
 
+List items can span several source lines. Continuation lines join the item
+and wrap with a hanging indent under the item text:
+
+- **Topic.** No more grids requiring horizontal scroll — narrow windows
+  fit and wide ones add extra columns for the details that used to be
+  hidden off-screen.
+- **Graphs** now have labeled axes and threshold markers, and overlapping
+  lines no longer erase each other.
+  - Nested items can continue too, and keep their own deeper indent when
+    they wrap.
+- [ ] An unfinished checkbox item that runs long enough to need a second
+  source line in text mode.
+- [x] A finished checkbox item that runs long enough to need a second
+  source line in text mode.
+
+1. Numbered items continue the same way when the text runs on to an
+   indented second line.
+2. Lazy continuation lines without any indent
+also belong to the item.
+
+A heading or quote can follow a paragraph line directly:
+### Heading right after text
+More text right before a quote.
+> This quote has no blank line above it.
+
 ## Blockquotes
 
 > The best tool is the one you actually use.
